@@ -1,0 +1,41 @@
+# Unreal Engine generated output (including plugin output)
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+
+# Visual Studio / Rider / VS Code generated state
+.vs/
+.idea/
+.vscode/
+*.sln
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.VC.opendb
+*.VC.opendb
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.csproj
+*.csproj.user
+*.user
+*.userosscache
+*.sln.docstates
+*.ncb
+*.opendb
+*.slnx
+
+# Xcode generated projects
+*.xcodeproj/
+*.xcworkspace/
+
+# Generated packaging output
+/ArchivedBuilds/
+/PackagedBuilds/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
