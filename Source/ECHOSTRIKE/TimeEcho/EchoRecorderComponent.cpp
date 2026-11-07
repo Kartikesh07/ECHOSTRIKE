@@ -62,7 +62,8 @@ bool UEchoRecorderComponent::Advance(double Now)
 		RecordingState = State;
 	}
 	const double Duration = State->GetCycleDuration();
-	const int64 Cycle = FMath::FloorToInt64(FMath::Max(0., Now - State->GetRecordingEpoch()) / Duration);
+	const int64 Cycle = State->GetCycleAtServerTime(Now);
+	if (Cycle == INDEX_NONE) return false;
 	if (bStarted && Current.Cycle == Cycle) return true;
 	if (bStarted)
 	{

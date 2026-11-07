@@ -2,7 +2,7 @@
 #include "CoreMinimal.h"
 #include "Commandlets/Commandlet.h"
 #include "EchoHUDAssetCommandlet.generated.h"
-/** Creates missing HUD assets only. Existing designer work is never overwritten. */
+/** Creates missing HUD assets and adds the cycle indicator without rebuilding existing designer layouts. */
 UCLASS()
 class UEchoHUDAssetCommandlet : public UCommandlet
 {

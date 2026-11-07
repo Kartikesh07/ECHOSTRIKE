@@ -1,6 +1,8 @@
 #include "EchoHUDAssetCommandlet.h"
 #include "Modules/ModuleManager.h"
 #include "UI/EchoHUDWidgets.h"
+#include "UI/EchoCycleWidget.h"
+#include "Misc/Parse.h"
 #include "WidgetBlueprint.h"
 #include "WidgetBlueprintFactory.h"
 #include "Blueprint/WidgetTree.h"
@@ -139,6 +141,13 @@ bool Save(UWidgetBlueprint* BP)
 			}
 		}
 	});
+	// UE 5.7 requires GUIDs when extending an already compiled Widget Blueprint.
+	BP->ForEachSourceWidget([BP](UWidget* Widget)
+	{
+		if (!BP->WidgetVariableNameToGuidMap.Contains(Widget->GetFName())) BP->OnVariableAdded(Widget->GetFName());
+	});
+	for (UWidgetAnimation* Animation : BP->Animations)
+		if (Animation && !BP->WidgetVariableNameToGuidMap.Contains(Animation->GetFName())) BP->OnVariableAdded(Animation->GetFName());
 	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
 	FKismetEditorUtilities::CompileBlueprint(BP);
 	if (BP->Status == BS_Error)
@@ -158,6 +167,50 @@ void Place(UCanvasPanel* Canvas, UWidget* W, FVector2D Anchor, FVector2D Alignme
 	S->SetPosition(Position);
 	S->SetSize(Size);
 }
+/** Additive and idempotent: never rebuild an existing HUD tree or designer animations. */
+bool AddCycleIndicator(UWidgetBlueprint* HUD)
+{
+	bool bNew = false;
+	auto* Cycle = Make(TEXT("WBP_EchoCycleIndicator"), UEchoCycleWidget::StaticClass(), bNew);
+	if (bNew)
+	{
+		auto* V = Panel(Cycle);
+		Line(V, Text(Cycle, TEXT("CycleText"), TEXT("CYCLE --"), 18, FLinearColor(.88f, .95f, 1, 1)), 0);
+		Line(V, Text(Cycle, TEXT("CountdownText"), TEXT("NEXT ECHO / --"), 14));
+		Line(V, Text(Cycle, TEXT("StatusText"), TEXT("UNAVAILABLE"), 12));
+		Bar(Cycle, V, TEXT("RecordingFill"), 4);
+		Line(V, Text(Cycle, TEXT("ProgressLabel"), TEXT("RECORDING PROGRESS"), 9), 4);
+		Pulse(Cycle, TEXT("CycleTransition"), TEXT("CycleText"), .55f, 1.f, .3f);
+		Pulse(Cycle, TEXT("EchoActivation"), TEXT("StatusText"), .4f, 1.f, .4f);
+	}
+	if (!Cycle->ParentClass->IsChildOf(UEchoCycleWidget::StaticClass()) || !Save(Cycle)) return false;
+	if (UWidget* Existing = HUD->WidgetTree->FindWidget(TEXT("CycleIndicator")))
+	{
+		if (!Existing->IsA(UEchoCycleWidget::StaticClass())) return false;
+	}
+	else
+	{
+		auto* Canvas = Cast<UCanvasPanel>(HUD->WidgetTree->FindWidget(TEXT("HUDLayout")));
+		if (!Canvas)
+		{
+			UE_LOG(LogTemp, Error, TEXT("EchoHUD: HUDLayout canvas missing; preserving existing layout."));
+			return false;
+		}
+		auto* Indicator = HUD->WidgetTree->ConstructWidget<UUserWidget>(
+			TSubclassOf<UUserWidget>(Cycle->GeneratedClass.Get()), TEXT("CycleIndicator"));
+		Indicator->SetVisibility(ESlateVisibility::HitTestInvisible);
+		// Existing safe-zone and project DPI scaling apply; all placement remains editable in UMG.
+		Place(Canvas, Indicator, {0, 0}, {0, 0}, {32, 32}, {300, 150});
+	}
+	if (!Save(HUD)) return false;
+	const auto* Defaults = Cast<UEchoCycleWidget>(Cycle->GeneratedClass->GetDefaultObject());
+	if (!Defaults || !Cycle->WidgetTree->FindWidget(TEXT("CycleText"))
+		|| !Cycle->WidgetTree->FindWidget(TEXT("CountdownText"))
+		|| !Cycle->WidgetTree->FindWidget(TEXT("StatusText"))
+		|| !Cycle->WidgetTree->FindWidget(TEXT("RecordingFill"))) return false;
+	UE_LOG(LogTemp, Display, TEXT("EchoCycleHUD: indicator and integrated HUD compiled, saved, and bindings verified."));
+	return true;
+}
 } // namespace EchoHUDAssets
 UEchoHUDAssetCommandlet::UEchoHUDAssetCommandlet()
 {
@@ -169,6 +222,11 @@ UEchoHUDAssetCommandlet::UEchoHUDAssetCommandlet()
 int32 UEchoHUDAssetCommandlet::Main(const FString& Params)
 {
 	using namespace EchoHUDAssets;
+	if (FParse::Param(*Params, TEXT("CycleOnly")))
+	{
+		auto* HUD = LoadObject<UWidgetBlueprint>(nullptr, TEXT("/Game/EchoStrike/UI/WBP_EchoHUD.WBP_EchoHUD"));
+		return HUD && AddCycleIndicator(HUD) ? 0 : 1;
+	}
 	bool bNew;
 	auto* Health = Make(TEXT("WBP_HealthBar"), UEchoHealthBar::StaticClass(), bNew);
 	if (bNew)
@@ -254,8 +312,8 @@ int32 UEchoHUDAssetCommandlet::Main(const FString& Params)
 		Add(Dash, TEXT("DashIndicator"), {1, 1}, {1, 1}, {-32, -32}, {230, 70});
 		Add(RespawnBP, TEXT("Respawn"), {.5f, .5f}, {.5f, .5f}, {0, 60}, {380, 120});
 	}
-	if (!Save(HUD))
+	if (!AddCycleIndicator(HUD))
 		return 1;
-	UE_LOG(LogTemp, Display, TEXT("EchoHUD: five Widget Blueprints compiled and saved."));
+	UE_LOG(LogTemp, Display, TEXT("EchoHUD: six Widget Blueprints compiled and saved."));
 	return 0;
 }

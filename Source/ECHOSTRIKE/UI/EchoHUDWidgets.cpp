@@ -1,4 +1,6 @@
 #include "UI/EchoHUDWidgets.h"
+#include "UI/EchoCycleWidget.h"
+#include "Core/EchoPlayerState.h"
 #include "Combat/EchoHealthComponent.h"
 #include "Player/EchoCharacter.h"
 #include "Player/EchoCharacterMovementComponent.h"
@@ -139,6 +141,7 @@ void UEchoHUDWidget::RefreshSources()
 			Player->OnPawnSet.RemoveDynamic(this, &ThisClass::PawnChanged);
 	ObservedPlayers.Reset();
 	auto* PC = GetOwningPlayer();
+	if (CycleIndicator) CycleIndicator->Observe(State.Get(), PC ? Cast<AEchoPlayerState>(PC->PlayerState) : nullptr);
 	auto* OwnPawn = PC ? Cast<AEchoCharacter>(PC->GetPawn()) : nullptr;
 	PlayerHealth->Observe(OwnPawn ? OwnPawn->HealthComponent.Get() : nullptr,
 						  NSLOCTEXT("EchoHUD", "You", "VITALS  /  YOU"));

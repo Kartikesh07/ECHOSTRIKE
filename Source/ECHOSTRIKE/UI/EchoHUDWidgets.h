@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "EchoHUDWidgets.generated.h"
+class UEchoCycleWidget;
 class UProgressBar;
 class UTextBlock;
 class UWidgetAnimation;
@@ -103,6 +104,8 @@ protected:
 	TObjectPtr<UEchoDashIndicator> DashIndicator;
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UEchoRespawnWidget> Respawn;
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UEchoCycleWidget> CycleIndicator;
 
 private:
 	UFUNCTION()
