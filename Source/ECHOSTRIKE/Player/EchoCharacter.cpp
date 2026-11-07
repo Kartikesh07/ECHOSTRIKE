@@ -1,5 +1,7 @@
 #include "Player/EchoCharacter.h"
 #include "Combat/EchoProjectile.h"
+#include "Combat/EchoHealthComponent.h"
+#include "Core/EchoGameMode.h"
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -18,6 +20,7 @@ AEchoCharacter::AEchoCharacter()
 {
 	bReplicates = true;
 	SetReplicateMovement(true);
+	HealthComponent = CreateDefaultSubobject<UEchoHealthComponent>(TEXT("HealthComponent"));
 
 	// CharacterMovement predicts this rotation locally, simulates it on the server,
 	// and smooths replicated movement/rotation on simulated proxies, even at rest.
@@ -71,7 +74,7 @@ AEchoCharacter::AEchoCharacter()
 
 void AEchoCharacter::DoMove(float Right, float Forward)
 {
-	if (Controller && IsLocallyControlled())
+	if (Controller && IsLocallyControlled() && !IsEliminated())
 	{
 		// Never use control rotation here: it belongs to mouse aiming.
 		const FRotator CameraYaw(0.0, GetCameraBoom()->GetComponentRotation().Yaw, 0.0);
@@ -104,7 +107,7 @@ float AEchoCharacter::GetFireInterval() const
 
 void AEchoCharacter::StartFiring()
 {
-	if (IsLocallyControlled())
+	if (IsLocallyControlled() && !IsEliminated())
 	{
 		ServerSetFiring(true);
 	}
@@ -125,7 +128,7 @@ void AEchoCharacter::ServerSetFiring_Implementation(bool bFiring)
 	{
 		return;
 	}
-	if (!bFiring)
+	if (!bFiring || IsEliminated())
 	{
 		GetWorldTimerManager().ClearTimer(FireTimer);
 	}
@@ -138,7 +141,7 @@ void AEchoCharacter::ServerSetFiring_Implementation(bool bFiring)
 void AEchoCharacter::FireShot()
 {
 	const APlayerController* Player = Cast<APlayerController>(Controller);
-	if (!HasAuthority() || !Player || Player->GetPawn() != this || GetOwner() != Player || !ProjectileClass)
+	if (!HasAuthority() || IsEliminated() || !Player || Player->GetPawn() != this || GetOwner() != Player || !ProjectileClass)
 	{
 		GetWorldTimerManager().ClearTimer(FireTimer);
 		return;
@@ -197,4 +200,38 @@ void AEchoCharacter::UnPossessed()
 {
 	GetWorldTimerManager().ClearTimer(FireTimer);
 	Super::UnPossessed();
+}
+
+void AEchoCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	HealthComponent->OnEliminated.AddDynamic(this, &AEchoCharacter::HandleEliminated);
+}
+
+bool AEchoCharacter::IsEliminated() const
+{
+	return HealthComponent->IsEliminated();
+}
+
+bool AEchoCharacter::CanJumpInternal_Implementation() const
+{
+	return !IsEliminated() && Super::CanJumpInternal_Implementation();
+}
+
+void AEchoCharacter::HandleEliminated(UEchoHealthComponent* Component)
+{
+	GetWorldTimerManager().ClearTimer(FireTimer);
+	StopJumping();
+	ConsumeMovementInputVector();
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->bUseControllerDesiredRotation = false;
+	if (HasAuthority())
+	{
+		if (AEchoGameMode* GameMode = GetWorld()->GetAuthGameMode<AEchoGameMode>())
+		{
+			GameMode->RequestRespawn(this);
+		}
+	}
+	OnEliminated();
 }

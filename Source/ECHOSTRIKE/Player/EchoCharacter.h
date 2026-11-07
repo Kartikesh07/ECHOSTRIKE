@@ -6,6 +6,7 @@
 
 class AEchoProjectile;
 class UInputAction;
+class UEchoHealthComponent;
 
 /** Fixed arena camera and movement independent of the controller's aim yaw. */
 UCLASS()
@@ -15,11 +16,22 @@ class ECHOSTRIKE_API AEchoCharacter : public AECHOSTRIKECharacter
 
 public:
 	AEchoCharacter();
+	UFUNCTION(BlueprintPure, Category = "Health")
+	bool IsEliminated() const;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Health")
+	TObjectPtr<UEchoHealthComponent> HealthComponent;
 
 	virtual void DoMove(float Right, float Forward) override;
 	virtual void DoLook(float Yaw, float Pitch) override;
 
 protected:
+	virtual void PostInitializeComponents() override;
+	virtual bool CanJumpInternal_Implementation() const override;
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Health", meta = (DisplayName = "On Eliminated"))
+	void OnEliminated();
+
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void UnPossessed() override;
@@ -45,6 +57,9 @@ protected:
 	FVector ProjectileSpawnOffset = FVector(70.0, 0.0, 0.0);
 
 private:
+	UFUNCTION()
+	void HandleEliminated(UEchoHealthComponent* Component);
+
 	void StartFiring();
 	void StopFiring();
 	void FireShot();

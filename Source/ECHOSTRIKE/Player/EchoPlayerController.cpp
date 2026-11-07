@@ -38,7 +38,8 @@ void AEchoPlayerController::UpdateRotation(float DeltaTime)
 	// character Tick or per-frame RPC is needed. Remote controllers retain the yaw
 	// received by the server through CharacterMovement's packed movement updates.
 	Super::UpdateRotation(DeltaTime);
-	if (IsLocalController() && Cast<AEchoCharacter>(GetPawn()))
+	const AEchoCharacter* EchoPawn = Cast<AEchoCharacter>(GetPawn());
+	if (IsLocalController() && EchoPawn && !EchoPawn->IsEliminated())
 	{
 		float AimYaw;
 		if (GetCursorAimYaw(AimYaw))

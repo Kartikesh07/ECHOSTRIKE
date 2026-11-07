@@ -5,6 +5,8 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "UObject/ConstructorHelpers.h"
 #include "ECHOSTRIKE.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/DamageType.h"
 
 AEchoProjectile::AEchoProjectile()
 {
@@ -79,8 +81,17 @@ void AEchoProjectile::PostNetReceiveVelocity(const FVector& NewVelocity)
 void AEchoProjectile::OnImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
 {
-	if (HasAuthority() && OtherActor && OtherActor != GetOwner() && OtherActor != GetInstigator())
+	if (HasAuthority() && !bImpactHandled && IsValid(OtherActor)
+		&& OtherActor != GetOwner() && OtherActor != GetInstigator())
 	{
+		// Mark consumed before damage callbacks, which can trigger further collision/destruction.
+		bImpactHandled = true;
+		Collision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		if (FMath::IsFinite(Damage) && Damage > 0.0f)
+		{
+			UGameplayStatics::ApplyPointDamage(OtherActor, Damage, GetActorForwardVector(), Hit,
+				GetInstigatorController(), this, UDamageType::StaticClass());
+		}
 		UE_LOG(LogECHOSTRIKE, Log, TEXT("Projectile %s hit %s at %s"),
 			*GetName(), *GetNameSafe(OtherActor), *Hit.ImpactPoint.ToCompactString());
 		Destroy();

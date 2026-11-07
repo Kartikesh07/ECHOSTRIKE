@@ -20,6 +20,9 @@ public:
 	float GetCollisionRadius() const;
 
 protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile|Damage", meta = (ClampMin = "0.0"))
+	float Damage = 20.0f;
+
 	virtual void BeginPlay() override;
 	virtual void PostNetReceiveVelocity(const FVector& NewVelocity) override;
 
@@ -33,6 +36,8 @@ protected:
 	TObjectPtr<UProjectileMovementComponent> Movement;
 
 private:
+	bool bImpactHandled = false;
+
 	UFUNCTION()
 	void OnImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit);
