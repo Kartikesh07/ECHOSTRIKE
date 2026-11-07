@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "EchoProjectile.generated.h"
 
+class APlayerState;
 class USphereComponent;
 class UStaticMeshComponent;
 class UProjectileMovementComponent;
@@ -16,7 +17,14 @@ class ECHOSTRIKE_API AEchoProjectile : public AActor
 
 public:
 	AEchoProjectile();
+	/** Shared authority-only path for live fire and recorded successful shots. */
+	static AEchoProjectile* SpawnAuthoritative(AActor* ShotOwner, APawn* InstigatorPawn,
+		APlayerState* Player, TSubclassOf<AEchoProjectile> Class, const FTransform& Transform,
+		float Speed, float Lifetime);
 	void InitializeFlight(float Speed, float Lifetime);
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Projectile|Damage")
+	TObjectPtr<APlayerState> SourcePlayer;
 	float GetCollisionRadius() const;
 
 protected:
@@ -24,6 +32,7 @@ protected:
 	float Damage = 20.0f;
 
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 	virtual void PostNetReceiveVelocity(const FVector& NewVelocity) override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
@@ -37,6 +46,8 @@ protected:
 
 private:
 	bool bImpactHandled = false;
+	UFUNCTION()
+	void HandleSourcePawnSet(APlayerState* Player, APawn* NewPawn, APawn* OldPawn);
 
 	UFUNCTION()
 	void OnImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor,

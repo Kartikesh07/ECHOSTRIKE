@@ -28,6 +28,7 @@ void AEchoPlayerState::ClearEcho()
 void AEchoPlayerState::HandleCycleCompleted(const FEchoRecording& Recording, int64 NewCycle, double ServerStartTime)
 {
 	if (!HasAuthority()) return;
+	if (IsValid(ActiveEcho)) ActiveEcho->Playback->FlushPendingEvents();
 	ClearEcho();
 	// Never replay stale data after skipped cycles, or recordings from disconnected players.
 	if (IsInactive() || !EchoGhostClass || Recording.Cycle != NewCycle - 1 || Recording.Samples.IsEmpty()) return;
@@ -39,7 +40,7 @@ void AEchoPlayerState::HandleCycleCompleted(const FEchoRecording& Recording, int
 	if (!Ghost->Playback->Initialize(Recording, ServerStartTime)) { Ghost->Destroy(); return; }
 	ActiveEcho = Ghost;
 	Ghost->FinishSpawning(Transform);
-	Ghost->SetLifeSpan(FMath::Max(0.01f, static_cast<float>(ServerStartTime + Recording.Duration - GetWorld()->GetTimeSeconds())));
+	// Playback drains the final frame before destroying the ghost at the cycle boundary.
 }
 
 void AEchoPlayerState::EndPlay(const EEndPlayReason::Type Reason)

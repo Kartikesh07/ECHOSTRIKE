@@ -112,6 +112,8 @@ void UEchoRecorderComponent::RecordEvent(FEchoGameplayEvent Event)
 {
 	const double Now = GetWorld()->GetTimeSeconds();
 	if (!Advance(Now) || !Pawn.IsValid() || Event.Transform.ContainsNaN()) return;
+	// An action can open a cycle before its first periodic sample. Preserve that life boundary.
+	if (Current.Samples.IsEmpty() || Current.Samples.Last().Life != Life) CaptureTransform(Now);
 	Event.Time = FMath::Clamp(static_cast<float>(Now - Current.ServerStartTime), 0.f, Current.Duration);
 	Event.Life = Life;
 	if (Current.Events.Num() < RecordingState->GetEventLimit())
@@ -126,6 +128,7 @@ void UEchoRecorderComponent::HandleShot(const FTransform& Transform, float Speed
 	Event.Type = EEchoRecordedEvent::Shot;
 	Event.Transform = Transform;
 	Event.Direction = Transform.GetRotation().GetForwardVector();
+	Event.ProjectileClass = Pawn.IsValid() ? Pawn->GetProjectileClass() : nullptr;
 	Event.ProjectileSpeed = Speed;
 	Event.ProjectileLifetime = Lifetime;
 	RecordEvent(MoveTemp(Event));

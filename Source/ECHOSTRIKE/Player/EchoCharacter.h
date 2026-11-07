@@ -20,6 +20,7 @@ public:
 	AEchoCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 	/** Raised only after a projectile has successfully finished spawning on authority. */
 	FEchoShotFired OnShotFired;
+	TSubclassOf<AEchoProjectile> GetProjectileClass() const { return ProjectileClass; }
 	UFUNCTION(BlueprintPure, Category = "Health")
 	bool IsEliminated() const;
 

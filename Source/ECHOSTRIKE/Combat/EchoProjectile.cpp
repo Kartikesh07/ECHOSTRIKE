@@ -7,6 +7,11 @@
 #include "ECHOSTRIKE.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/DamageType.h"
+#include "GameFramework/PlayerState.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/Pawn.h"
+#include "Engine/World.h"
+#include "Net/UnrealNetwork.h"
 
 AEchoProjectile::AEchoProjectile()
 {
@@ -45,6 +50,40 @@ AEchoProjectile::AEchoProjectile()
 	Movement->MaxSpeed = 0.0f; // Velocity comes from authoritative initialization/replication.
 }
 
+AEchoProjectile* AEchoProjectile::SpawnAuthoritative(AActor* ShotOwner, APawn* InstigatorPawn,
+	APlayerState* Player, TSubclassOf<AEchoProjectile> Class, const FTransform& Transform,
+	float Speed, float Lifetime)
+{
+	if (!IsValid(ShotOwner) || !ShotOwner->HasAuthority() || !Class || Transform.ContainsNaN()
+		|| !Transform.GetRotation().IsNormalized() || !FMath::IsFinite(Speed) || Speed <= 0.f
+		|| !FMath::IsFinite(Lifetime) || Lifetime <= 0.f) return nullptr;
+	AEchoProjectile* Projectile = ShotOwner->GetWorld()->SpawnActorDeferred<AEchoProjectile>(
+		Class, Transform, ShotOwner, InstigatorPawn, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	if (!Projectile) return nullptr;
+	Projectile->SourcePlayer = Player;
+	Projectile->InitializeFlight(Speed, Lifetime);
+	Projectile->FinishSpawning(Transform);
+	return IsValid(Projectile) ? Projectile : nullptr;
+}
+
+void AEchoProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME_CONDITION(AEchoProjectile, SourcePlayer, COND_InitialOnly);
+}
+
+void AEchoProjectile::HandleSourcePawnSet(APlayerState* Player, APawn* NewPawn, APawn* OldPawn)
+{
+	// Identity outlives the recorded pawn: ignore the player's current and future lives.
+	if (IsValid(NewPawn)) Collision->IgnoreActorWhenMoving(NewPawn, true);
+}
+
+void AEchoProjectile::EndPlay(const EEndPlayReason::Type Reason)
+{
+	if (IsValid(SourcePlayer)) SourcePlayer->OnPawnSet.RemoveDynamic(this, &AEchoProjectile::HandleSourcePawnSet);
+	Super::EndPlay(Reason);
+}
+
 void AEchoProjectile::InitializeFlight(float Speed, float Lifetime)
 {
 	check(HasAuthority());
@@ -64,6 +103,11 @@ void AEchoProjectile::BeginPlay()
 	{
 		Collision->IgnoreActorWhenMoving(GetOwner(), true);
 		Collision->IgnoreActorWhenMoving(GetInstigator(), true);
+		if (IsValid(SourcePlayer))
+		{
+			SourcePlayer->OnPawnSet.AddDynamic(this, &AEchoProjectile::HandleSourcePawnSet);
+			HandleSourcePawnSet(SourcePlayer, SourcePlayer->GetPawn(), nullptr);
+		}
 	}
 	else
 	{
@@ -82,7 +126,9 @@ void AEchoProjectile::OnImpact(UPrimitiveComponent* HitComponent, AActor* OtherA
 	UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
 {
 	if (HasAuthority() && !bImpactHandled && IsValid(OtherActor)
-		&& OtherActor != GetOwner() && OtherActor != GetInstigator())
+		&& OtherActor != GetOwner() && OtherActor != GetInstigator()
+		&& !(IsValid(SourcePlayer) && Cast<APawn>(OtherActor)
+			&& Cast<APawn>(OtherActor)->GetPlayerState() == SourcePlayer))
 	{
 		// Mark consumed before damage callbacks, which can trigger further collision/destruction.
 		bImpactHandled = true;
@@ -90,7 +136,7 @@ void AEchoProjectile::OnImpact(UPrimitiveComponent* HitComponent, AActor* OtherA
 		if (FMath::IsFinite(Damage) && Damage > 0.0f)
 		{
 			UGameplayStatics::ApplyPointDamage(OtherActor, Damage, GetActorForwardVector(), Hit,
-				GetInstigatorController(), this, UDamageType::StaticClass());
+				IsValid(SourcePlayer) ? SourcePlayer->GetPlayerController() : GetInstigatorController(), this, UDamageType::StaticClass());
 		}
 		UE_LOG(LogECHOSTRIKE, Log, TEXT("Projectile %s hit %s at %s"),
 			*GetName(), *GetNameSafe(OtherActor), *Hit.ImpactPoint.ToCompactString());

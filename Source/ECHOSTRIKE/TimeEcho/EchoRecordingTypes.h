@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "EchoRecordingTypes.generated.h"
 
+class AEchoProjectile;
+
 UENUM(BlueprintType)
 enum class EEchoRecordedEvent : uint8
 {
@@ -33,6 +35,7 @@ struct ECHOSTRIKE_API FEchoGameplayEvent
 	/** Shot spawn transform, dash start transform, or elimination transform. */
 	UPROPERTY(BlueprintReadOnly) FTransform Transform = FTransform::Identity;
 	UPROPERTY(BlueprintReadOnly) FVector Direction = FVector::ZeroVector;
+	UPROPERTY(BlueprintReadOnly) TSubclassOf<AEchoProjectile> ProjectileClass;
 	UPROPERTY(BlueprintReadOnly) float ProjectileSpeed = 0.f;
 	UPROPERTY(BlueprintReadOnly) float ProjectileLifetime = 0.f;
 };

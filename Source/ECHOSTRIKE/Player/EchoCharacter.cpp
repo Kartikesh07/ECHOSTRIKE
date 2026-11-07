@@ -197,14 +197,10 @@ void AEchoCharacter::FireShot()
 	}
 
 	const FTransform SpawnTransform(Facing, SpawnLocation);
-	AEchoProjectile* Projectile = GetWorld()->SpawnActorDeferred<AEchoProjectile>(
-		ProjectileClass, SpawnTransform, this, this, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-	if (Projectile)
+	if (AEchoProjectile::SpawnAuthoritative(this, this, GetPlayerState(), ProjectileClass,
+		SpawnTransform, ProjectileSpeed, ProjectileLifetime))
 	{
-		Projectile->InitializeFlight(ProjectileSpeed, ProjectileLifetime);
-		Projectile->FinishSpawning(SpawnTransform);
-		if (IsValid(Projectile))
-			OnShotFired.Broadcast(SpawnTransform, ProjectileSpeed, ProjectileLifetime);
+		OnShotFired.Broadcast(SpawnTransform, ProjectileSpeed, ProjectileLifetime);
 	}
 }
 
