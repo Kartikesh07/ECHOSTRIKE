@@ -5,6 +5,7 @@
 #include "EchoCharacterMovementComponent.generated.h"
 
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FEchoDashHUDChanged, float, float, bool);
+DECLARE_MULTICAST_DELEGATE_OneParam(FEchoDashConfirmed, const FVector&);
 
 /** Only corrections carry dash simulation state; ordinary move acknowledgements stay small. */
 struct FEchoMoveResponse : FCharacterMoveResponseDataContainer
@@ -28,6 +29,7 @@ public:
 	UEchoCharacterMovementComponent();
 	void RequestDash();
 	FEchoDashHUDChanged OnDashHUDChanged;
+	FEchoDashConfirmed OnDashConfirmed;
 
 	UFUNCTION(BlueprintPure, Category = "Dash")
 	bool IsDashing() const { return MovementMode == MOVE_Custom && CustomMovementMode == DashMovementMode; }
@@ -65,6 +67,7 @@ protected:
 private:
 #if WITH_DEV_AUTOMATION_TESTS
 	friend class FEchoDashTest;
+	friend class FEchoRecordingTest;
 #endif
 	friend class FEchoSavedMove;
 	friend struct FEchoMoveResponse;

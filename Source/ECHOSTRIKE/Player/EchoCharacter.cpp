@@ -203,6 +203,8 @@ void AEchoCharacter::FireShot()
 	{
 		Projectile->InitializeFlight(ProjectileSpeed, ProjectileLifetime);
 		Projectile->FinishSpawning(SpawnTransform);
+		if (IsValid(Projectile))
+			OnShotFired.Broadcast(SpawnTransform, ProjectileSpeed, ProjectileLifetime);
 	}
 }
 

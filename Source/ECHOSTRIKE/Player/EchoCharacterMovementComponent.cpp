@@ -109,6 +109,7 @@ void UEchoCharacterMovementComponent::UpdateCharacterStateBeforeMovement(float D
 			DashRemaining = DashDuration;
 			CooldownRemaining = DashCooldown;
 			SetMovementMode(MOVE_Custom, DashMovementMode);
+			if (CharacterOwner->HasAuthority()) OnDashConfirmed.Broadcast(DashDirection);
 		}
 		else if (CharacterOwner->HasAuthority() && CharacterOwner->GetRemoteRole() == ROLE_AutonomousProxy)
 		{

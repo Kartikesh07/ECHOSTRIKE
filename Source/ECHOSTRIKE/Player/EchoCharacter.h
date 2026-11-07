@@ -8,6 +8,8 @@ class AEchoProjectile;
 class UInputAction;
 class UEchoHealthComponent;
 
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FEchoShotFired, const FTransform&, float, float);
+
 /** Fixed arena camera and movement independent of the controller's aim yaw. */
 UCLASS()
 class ECHOSTRIKE_API AEchoCharacter : public AECHOSTRIKECharacter
@@ -16,6 +18,8 @@ class ECHOSTRIKE_API AEchoCharacter : public AECHOSTRIKECharacter
 
 public:
 	AEchoCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+	/** Raised only after a projectile has successfully finished spawning on authority. */
+	FEchoShotFired OnShotFired;
 	UFUNCTION(BlueprintPure, Category = "Health")
 	bool IsEliminated() const;
 
