@@ -36,7 +36,7 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Health", meta = (ClampMin = "1.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, ReplicatedUsing = OnRep_MaxHealth, Category = "Health", meta = (ClampMin = "1.0"))
 	float MaxHealth = 100.0f;
 
 private:
@@ -47,6 +47,7 @@ private:
 
 	UFUNCTION()
 	void OnRep_Health(float PreviousHealth);
+	UFUNCTION() void OnRep_MaxHealth();
 
 	UFUNCTION()
 	void HandleDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType,

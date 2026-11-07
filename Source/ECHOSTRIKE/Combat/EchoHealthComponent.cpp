@@ -57,3 +57,8 @@ void UEchoHealthComponent::OnRep_Health(float PreviousHealth)
 		OnEliminated.Broadcast(this);
 	}
 }
+
+void UEchoHealthComponent::OnRep_MaxHealth()
+{
+	OnHealthChanged.Broadcast(this, Health, Health);
+}

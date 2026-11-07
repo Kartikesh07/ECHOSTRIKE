@@ -4,6 +4,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "EchoCharacterMovementComponent.generated.h"
 
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FEchoDashHUDChanged, float, float, bool);
+
 /** Only corrections carry dash simulation state; ordinary move acknowledgements stay small. */
 struct FEchoMoveResponse : FCharacterMoveResponseDataContainer
 {
@@ -25,6 +27,7 @@ class ECHOSTRIKE_API UEchoCharacterMovementComponent : public UCharacterMovement
 public:
 	UEchoCharacterMovementComponent();
 	void RequestDash();
+	FEchoDashHUDChanged OnDashHUDChanged;
 
 	UFUNCTION(BlueprintPure, Category = "Dash")
 	bool IsDashing() const { return MovementMode == MOVE_Custom && CustomMovementMode == DashMovementMode; }

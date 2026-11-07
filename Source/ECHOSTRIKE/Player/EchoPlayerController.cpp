@@ -1,5 +1,7 @@
 #include "Player/EchoPlayerController.h"
 #include "Player/EchoCharacter.h"
+#include "UI/EchoHUDWidgets.h"
+#include "Net/UnrealNetwork.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/LocalPlayer.h"
 #include "InputMappingContext.h"
@@ -8,6 +10,10 @@
 
 AEchoPlayerController::AEchoPlayerController()
 {
+	static ConstructorHelpers::FClassFinder<UEchoHUDWidget> HUDAsset(TEXT("/Game/EchoStrike/UI/WBP_EchoHUD"));
+	HUDWidgetClass = HUDAsset.Class;
+	static ConstructorHelpers::FClassFinder<UUserWidget> CursorAsset(TEXT("/Game/EchoStrike/UI/WBP_EchoCrosshair"));
+	CrosshairWidgetClass = CursorAsset.Class;
 	static ConstructorHelpers::FObjectFinder<UInputMappingContext> DefaultContext(TEXT("/Game/Input/IMC_Default.IMC_Default"));
 	DefaultMappingContexts.Add(DefaultContext.Object);
 	static ConstructorHelpers::FObjectFinder<UInputMappingContext> FireContext(TEXT("/Game/Input/IMC_Fire.IMC_Fire"));
@@ -26,11 +32,21 @@ void AEchoPlayerController::BeginPlay()
 		bEnableMouseOverEvents = false;
 
 		// Keep absolute cursor coordinates available, including while a mouse button
-		// is held. There are no UI widgets; Enhanced Input still receives gameplay keys.
+		// is held. HUD widgets are hit-test invisible; gameplay retains input.
 		FInputModeGameAndUI InputMode;
 		InputMode.SetHideCursorDuringCapture(false);
 		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 		SetInputMode(InputMode);
+		if (GetLocalPlayer() && !HUDWidget && HUDWidgetClass)
+		{
+			HUDWidget = CreateWidget<UEchoHUDWidget>(this, HUDWidgetClass);
+			if (HUDWidget) HUDWidget->AddToPlayerScreen(10);
+		}
+		if (GetLocalPlayer() && CrosshairWidgetClass)
+		{
+			CrosshairWidget = CreateWidget<UUserWidget>(this, CrosshairWidgetClass);
+			SetMouseCursorWidget(EMouseCursor::Default, CrosshairWidget);
+		}
 	}
 }
 
@@ -101,4 +117,41 @@ bool AEchoPlayerController::GetCursorAimYaw(float& OutYaw) const
 
 	OutYaw = AimOffset.Rotation().Yaw;
 	return true;
+}
+
+void AEchoPlayerController::SetPawn(APawn* InPawn)
+{
+	Super::SetPawn(InPawn);
+	if (HasAuthority() && Cast<AEchoCharacter>(InPawn) && !Cast<AEchoCharacter>(InPawn)->IsEliminated()) SetRespawnDeadline(-1);
+	if (HUDWidget) { HUDWidget->RefreshSources(); HUDWidget->RefreshRespawn(); }
+}
+void AEchoPlayerController::SetRespawnDeadline(double Deadline)
+{
+	if (!HasAuthority()) return;
+	RespawnDeadline = Deadline;
+	ForceNetUpdate();
+	OnRep_RespawnDeadline();
+}
+void AEchoPlayerController::OnRep_RespawnDeadline()
+{
+	if (HUDWidget) { HUDWidget->RefreshRespawn(); HUDWidget->RefreshSources(); }
+}
+void AEchoPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME_CONDITION(AEchoPlayerController, RespawnDeadline, COND_OwnerOnly);
+}
+void AEchoPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (HUDWidget) HUDWidget->RemoveFromParent();
+	HUDWidget = nullptr;
+	if (IsLocalController()) SetMouseCursorWidget(EMouseCursor::Default, nullptr);
+	CrosshairWidget = nullptr;
+	Super::EndPlay(EndPlayReason);
+}
+
+void AEchoPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	if (HUDWidget) HUDWidget->RefreshSources();
 }

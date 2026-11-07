@@ -33,9 +33,12 @@ void AEchoGameMode::RequestRespawn(AEchoCharacter* EliminatedCharacter)
 void AEchoGameMode::ScheduleRespawn(TWeakObjectPtr<AController> Player, float Delay)
 {
 	FPendingRespawn& Pending = PendingRespawns.FindChecked(Player);
+	const float SafeDelay = FMath::IsFinite(Delay) ? FMath::Max(0.1f, Delay) : 3.0f;
+	if (auto* PC = Cast<AEchoPlayerController>(Player.Get()))
+		PC->SetRespawnDeadline(GetGameState<AEchoGameState>()->GetServerWorldTimeSeconds() + SafeDelay);
 	GetWorldTimerManager().SetTimer(Pending.Timer,
 		FTimerDelegate::CreateUObject(this, &AEchoGameMode::CompleteRespawn, Player),
-		FMath::IsFinite(Delay) ? FMath::Max(0.1f, Delay) : 3.0f, false);
+		SafeDelay, false);
 }
 
 void AEchoGameMode::CompleteRespawn(TWeakObjectPtr<AController> Player)

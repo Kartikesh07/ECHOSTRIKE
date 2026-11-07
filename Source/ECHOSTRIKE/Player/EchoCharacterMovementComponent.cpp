@@ -123,7 +123,11 @@ void UEchoCharacterMovementComponent::UpdateCharacterStateBeforeMovement(float D
 void UEchoCharacterMovementComponent::UpdateCharacterStateAfterMovement(float DeltaSeconds)
 {
 	Super::UpdateCharacterStateAfterMovement(DeltaSeconds);
+	const float PreviousCooldown = CooldownRemaining;
 	CooldownRemaining = FMath::Max(0.0f, CooldownRemaining - DeltaSeconds);
+	// Notify after live simulation/replay; no new tick or network messages.
+	if (CharacterOwner->IsLocallyControlled() && (PreviousCooldown > 0.f || IsDashing()))
+		OnDashHUDChanged.Broadcast(CooldownRemaining, DashCooldown, IsDashing());
 }
 
 void UEchoCharacterMovementComponent::PhysCustom(float DeltaTime, int32 Iterations)
@@ -198,6 +202,7 @@ void UEchoCharacterMovementComponent::FinishDash()
 void UEchoCharacterMovementComponent::OnMovementModeChanged(EMovementMode PreviousMode, uint8 PreviousCustomMode)
 {
 	Super::OnMovementModeChanged(PreviousMode, PreviousCustomMode);
+	if (CharacterOwner && CharacterOwner->IsLocallyControlled()) OnDashHUDChanged.Broadcast(CooldownRemaining, DashCooldown, IsDashing());
 	if (!IsDashing())
 	{
 		DashRemaining = 0.0f;
@@ -279,5 +284,6 @@ bool UEchoCharacterMovementComponent::ClientUpdatePositionAfterServerUpdate()
 	const bool bLiveDashRequested = bDashRequested;
 	const bool bReplayed = Super::ClientUpdatePositionAfterServerUpdate();
 	bDashRequested = bLiveDashRequested;
+	if (bReplayed && CharacterOwner->IsLocallyControlled()) OnDashHUDChanged.Broadcast(CooldownRemaining, DashCooldown, IsDashing());
 	return bReplayed;
 }
