@@ -236,6 +236,10 @@ bool AEchoCharacter::CanJumpInternal_Implementation() const
 
 void AEchoCharacter::HandleEliminated(UEchoHealthComponent* Component)
 {
+	// Actor hiding covers every owned primitive without changing component defaults
+	// (or deactivating the owning player's camera during the respawn delay).
+	SetActorHiddenInGame(true);
+	SetActorEnableCollision(false);
 	GetWorldTimerManager().ClearTimer(FireTimer);
 	StopJumping();
 	ConsumeMovementInputVector();
@@ -244,6 +248,10 @@ void AEchoCharacter::HandleEliminated(UEchoHealthComponent* Component)
 	GetCharacterMovement()->bUseControllerDesiredRotation = false;
 	if (HasAuthority())
 	{
+		// Hidden, non-colliding pawns otherwise cease being relevant to other players
+		// before their final health/visibility state can reach those connections.
+		bAlwaysRelevant = true;
+		ForceNetUpdate();
 		if (AEchoGameMode* GameMode = GetWorld()->GetAuthGameMode<AEchoGameMode>())
 		{
 			GameMode->RequestRespawn(this);
