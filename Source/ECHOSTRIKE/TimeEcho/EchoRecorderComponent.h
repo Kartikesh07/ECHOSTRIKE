@@ -10,6 +10,8 @@ class AEchoGameState;
 class APlayerState;
 class UEchoHealthComponent;
 
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FEchoCycleCompleted, const FEchoRecording&, int64, double);
+
 /** Server-only PlayerState recorder. GameState supplies the shared sampling clock. */
 UCLASS(ClassGroup = (TimeEcho))
 class ECHOSTRIKE_API UEchoRecorderComponent : public UActorComponent
@@ -17,6 +19,7 @@ class ECHOSTRIKE_API UEchoRecorderComponent : public UActorComponent
 	GENERATED_BODY()
 public:
 	UEchoRecorderComponent();
+	FEchoCycleCompleted OnCycleCompleted;
 	void Sample(double Now);
 	void FinishRecording();
 	const FEchoRecording& GetCurrentRecording() const { return Current; }

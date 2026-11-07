@@ -8,7 +8,10 @@ void AEchoGameState::RemovePlayerState(APlayerState* Player)
 {
 	if (HasAuthority())
 		if (AEchoPlayerState* EchoPlayer = Cast<AEchoPlayerState>(Player))
+		{
 			EchoPlayer->EchoRecorder->FinishRecording();
+			EchoPlayer->ClearEcho();
+		}
 	Super::RemovePlayerState(Player);
 	OnRosterChanged.Broadcast();
 }

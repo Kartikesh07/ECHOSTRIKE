@@ -37,6 +37,8 @@ void UEchoRecorderComponent::UnbindPawn()
 void UEchoRecorderComponent::HandlePawnSet(APlayerState* Player, APawn* NewPawn, APawn* OldPawn)
 {
 	if (!GetOwner()->HasAuthority() || bFinished || Pawn.Get() == NewPawn) return;
+	// A possession change also ends a life when no damage/elimination occurred.
+	if (Pawn.IsValid() && !bEliminationRecorded) HandleEliminated(Pawn->HealthComponent);
 	UnbindPawn();
 	AEchoCharacter* Character = Cast<AEchoCharacter>(NewPawn);
 	if (!IsValid(Character)) return;
@@ -65,6 +67,7 @@ bool UEchoRecorderComponent::Advance(double Now)
 	if (bStarted)
 	{
 		Current.bCompleteCycle = true;
+		OnCycleCompleted.Broadcast(Current, Cycle, State->GetRecordingEpoch() + Cycle * Duration);
 		State->StoreRecording(MoveTemp(Current));
 	}
 	// After a server hitch skip wholly unobserved cycles; never fabricate samples.
