@@ -10,6 +10,8 @@ AEchoPlayerController::AEchoPlayerController()
 {
 	static ConstructorHelpers::FObjectFinder<UInputMappingContext> DefaultContext(TEXT("/Game/Input/IMC_Default.IMC_Default"));
 	DefaultMappingContexts.Add(DefaultContext.Object);
+	static ConstructorHelpers::FObjectFinder<UInputMappingContext> FireContext(TEXT("/Game/Input/IMC_Fire.IMC_Fire"));
+	DefaultMappingContexts.Add(FireContext.Object);
 }
 
 void AEchoPlayerController::BeginPlay()
