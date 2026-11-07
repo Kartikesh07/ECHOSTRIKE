@@ -52,7 +52,7 @@ protected:
 public:
 
 	/** Constructor */
-	AECHOSTRIKECharacter();	
+	AECHOSTRIKECharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 protected:
 

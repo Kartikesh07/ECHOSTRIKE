@@ -15,7 +15,7 @@ class ECHOSTRIKE_API AEchoCharacter : public AECHOSTRIKECharacter
 	GENERATED_BODY()
 
 public:
-	AEchoCharacter();
+	AEchoCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 	UFUNCTION(BlueprintPure, Category = "Health")
 	bool IsEliminated() const;
 
@@ -39,6 +39,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Input")
 	TObjectPtr<UInputAction> FireAction;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Dash|Input")
+	TObjectPtr<UInputAction> DashAction;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Combat")
 	TSubclassOf<AEchoProjectile> ProjectileClass;
 
@@ -61,6 +64,7 @@ private:
 	void HandleEliminated(UEchoHealthComponent* Component);
 
 	void StartFiring();
+	void RequestDash();
 	void StopFiring();
 	void FireShot();
 	float GetFireInterval() const;

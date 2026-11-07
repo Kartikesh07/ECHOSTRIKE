@@ -1,4 +1,5 @@
 #include "Player/EchoCharacter.h"
+#include "Player/EchoCharacterMovementComponent.h"
 #include "Combat/EchoProjectile.h"
 #include "Combat/EchoHealthComponent.h"
 #include "Core/EchoGameMode.h"
@@ -16,7 +17,8 @@
 #include "ECHOSTRIKE.h"
 #include "UObject/ConstructorHelpers.h"
 
-AEchoCharacter::AEchoCharacter()
+AEchoCharacter::AEchoCharacter(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UEchoCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	bReplicates = true;
 	SetReplicateMovement(true);
@@ -69,6 +71,8 @@ AEchoCharacter::AEchoCharacter()
 
 	static ConstructorHelpers::FObjectFinder<UInputAction> FireInput(TEXT("/Game/Input/Actions/IA_Fire.IA_Fire"));
 	FireAction = FireInput.Object;
+	static ConstructorHelpers::FObjectFinder<UInputAction> DashInput(TEXT("/Game/Input/Actions/IA_Dash.IA_Dash"));
+	DashAction = DashInput.Object;
 	ProjectileClass = AEchoProjectile::StaticClass();
 }
 
@@ -92,11 +96,23 @@ void AEchoCharacter::DoLook(float Yaw, float Pitch)
 void AEchoCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	if (UEnhancedInputComponent* Input = Cast<UEnhancedInputComponent>(PlayerInputComponent); Input && DashAction)
+	{
+		Input->BindAction(DashAction, ETriggerEvent::Started, this, &AEchoCharacter::RequestDash);
+	}
 	if (UEnhancedInputComponent* Input = Cast<UEnhancedInputComponent>(PlayerInputComponent); Input && FireAction)
 	{
 		Input->BindAction(FireAction, ETriggerEvent::Started, this, &AEchoCharacter::StartFiring);
 		Input->BindAction(FireAction, ETriggerEvent::Completed, this, &AEchoCharacter::StopFiring);
 		Input->BindAction(FireAction, ETriggerEvent::Canceled, this, &AEchoCharacter::StopFiring);
+	}
+}
+
+void AEchoCharacter::RequestDash()
+{
+	if (IsLocallyControlled() && !IsEliminated())
+	{
+		CastChecked<UEchoCharacterMovementComponent>(GetCharacterMovement())->RequestDash();
 	}
 }
 

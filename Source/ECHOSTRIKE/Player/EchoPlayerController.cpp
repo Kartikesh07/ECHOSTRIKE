@@ -12,6 +12,8 @@ AEchoPlayerController::AEchoPlayerController()
 	DefaultMappingContexts.Add(DefaultContext.Object);
 	static ConstructorHelpers::FObjectFinder<UInputMappingContext> FireContext(TEXT("/Game/Input/IMC_Fire.IMC_Fire"));
 	DefaultMappingContexts.Add(FireContext.Object);
+	static ConstructorHelpers::FObjectFinder<UInputMappingContext> DashContext(TEXT("/Game/Input/IMC_Dash.IMC_Dash"));
+	DefaultMappingContexts.Add(DashContext.Object);
 }
 
 void AEchoPlayerController::BeginPlay()
